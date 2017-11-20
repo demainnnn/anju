@@ -41,7 +41,10 @@ def getResult(url):
 
 class CommunitySpider(CrawlSpider):
     name = "community"
-    start_urls = ["https://beijing.anjuke.com/community/"]
+    start_urls = ["https://beijing.anjuke.com/community/yayuncun/"]
+
+    def parse_start_url(self, response):
+        return self.getRecord(response)   
 
     rules = (
         Rule(LinkExtractor(restrict_xpaths = ("//div[@class='multi-page']/a[@class='aNxt']"), process_value=processValue),\
@@ -49,11 +52,23 @@ class CommunitySpider(CrawlSpider):
     )
 
     def getRecord(self, response):
-        urlList = response.xpath("//div[@class='li-itemmod']/div[@class='li-info']/h3/a/@href").extract()
-        for url in urlList:
+        items = response.xpath("//div[@class='li-itemmod']")
+        for i in range(len(items)):
+            url = ""
+            price = "--"
+            trend = "--"
+            try:
+                url = items[i].xpath("./div[@class='li-info']/h3/a/@href").extract_first()
+                trend = items[i].xpath("./div[@class='li-side']/p/text()").extract()[2]
+                price = items[i].xpath("./div[@class='li-side']/p/strong/text()").extract_first()
+            except:
+                log.error("error occured, url is " + url)
+            log.info(url)
+            log.info(price)
+            log.info(trend)
             wholeUrl = "https://beijing.anjuke.com" + url.decode('utf-8')
             #log.info("request for " + wholeUrl[:-1])
-            yield Request(url=wholeUrl[:-1], callback=self.parseItem)
+            yield Request(url=wholeUrl[:-1], callback=self.parseItem, meta={"price": price, "trend": trend.encode('utf-8')})
 
     def parseItem(self, response):
         resultStr = ""
@@ -71,14 +86,15 @@ class CommunitySpider(CrawlSpider):
             #log.info(lat[0])
             resultStr += str(lat[0]) + ','
         #价格和剩余房源是ajax请求
-        priceUrl = "https://beijing.anjuke.com/community_ajax/152/price/?cis=" + str(id) + "&ib=0"
-        priceResult = getResult(priceUrl)
-        if priceResult:
-            price = priceResult["data"][str(id)]["mid_price"]
-            change = priceResult["data"][str(id)]["mid_change"]
-            #log.info(price)
-            #log.info(change)
-            resultStr += str(price) + ',' + str(change) + ','
+        #priceUrl = "https://beijing.anjuke.com/community_ajax/152/price/?cis=" + str(id) + "&ib=0"
+        #priceResult = getResult(priceUrl)
+        #if priceResult:
+        #    price = priceResult["data"][str(id)]["mid_price"]
+        #    change = priceResult["data"][str(id)]["mid_change"]
+        #    #log.info(price)
+        #    #log.info(change)
+        #    resultStr += str(price) + ',' + str(change) + ','
+        resultStr += str(response.meta["price"]) + ',' + str(response.meta["trend"]) + ','
         resourceUrl = "https://beijing.anjuke.com/v3/ajax/communityext/?commid=" +str(id) + "&useflg=onlyForAjax"
         resourceResult = getResult(resourceUrl)
         if resourceResult:

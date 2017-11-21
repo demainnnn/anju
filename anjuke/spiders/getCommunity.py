@@ -41,7 +41,7 @@ def getResult(url):
 
 class CommunitySpider(CrawlSpider):
     name = "community"
-    start_urls = ["https://beijing.anjuke.com/community/xicheng/"]
+    start_urls = ["https://beijing.anjuke.com/community/zizhuqiao/"]
 
     def parse_start_url(self, response):
         return self.getRecord(response)   
